@@ -1,0 +1,56 @@
+当然，我可以帮你进行一些代码的优化和调整。以下是一个稍微简化和优化的版本：
+
+```python
+from bitcoinlib.services.bitcoind import Bitcoind
+import csv
+
+def extract_transaction_data(transaction):
+    # 提取交易数据
+    vin, vout = transaction.get('vin', []), transaction.get('vout', [])
+
+    r = vin[0].get('coinbase', '') if vin else ''
+    s = vout[0].get('scriptPubKey', {}).get('hex', '') if vout else ''
+    pubkey = vout[0].get('scriptPubKey', {}).get('addresses', [''])[0] if vout else ''
+    txid = transaction.get('txid', '')
+    message_hash = transaction.get('hash', '')
+    block_time = transaction.get('time', '')
+
+    return r, s, pubkey, txid, message_hash, block_time
+
+def save_to_csv(data, filename):
+    # 将数据保存到CSV文件
+    with open(filename, 'a', newline='') as csvfile:
+        fieldnames = ['r', 's', 'pubkey', 'txid', 'message_hash', 'block_time']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        # 如果文件为空，写入表头
+        if csvfile.tell() == 0:
+            writer.writeheader()
+
+        # 写入数据
+        writer.writerow({
+            'r': data[0],
+            's': data[1],
+            'pubkey': data[2],
+            'txid': data[3],
+            'message_hash': data[4],
+            'block_time': data[5]
+        })
+
+# 连接到本地比特币节点
+bclient = Bitcoind()
+
+# 获取最新区块高度
+block_height = bclient.getblockcount()
+
+for height in range(1, block_height + 1):
+    block_hash = bclient.getblockhash(height)
+    block = bclient.getblock(block_hash)
+
+    for txid in block.get('tx', []):
+        transaction = bclient.getrawtransaction(txid, 1)
+        transaction_data = extract_transaction_data(transaction)
+        save_to_csv(transaction_data, 'block_data.csv')
+```
+
+这个版本保留了原有的逻辑，但进行了一些简化和清理，以提高可读性和可维护性。确保在运行脚本之前先安装了 `python-bitcoinlib`。如果有其他问题，请随时告诉我。
